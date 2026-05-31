@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>粮食存储管理系统</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div class="hero-main">
+          <h1>粮食存储管理系统</h1>
+          <p class="hero-subtitle">完整的粮食批次管理与预警系统</p>
+        </div>
+        <div class="hero-aside">
+          <div class="aside-item">
+            <strong>批次总数</strong>
+            <span id="totalBatches">0</span>
+          </div>
+          <div class="aside-item">
+            <strong>库存总量</strong>
+            <span id="totalAmount">0 吨</span>
+          </div>
+          <div class="aside-item">
+            <strong>预警批次</strong>
+            <span id="warningCount">0</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="control-panel panel">
+        <div class="control-copy">
+          <p class="section-label">系统操作</p>
+          <h2>功能菜单</h2>
+        </div>
+        <div class="control-actions">
+          <button id="loadCsvBtn" class="solid-button" type="button">加载CSV数据</button>
+          <button id="addBatchBtn" class="ghost-button" type="button">添加批次</button>
+          <button id="undoBtn" class="ghost-button" type="button">撤销操作</button>
+          <button id="saveBtn" class="ghost-button" type="button">保存数据</button>
+        </div>
+      </section>
+
+      <input type="file" id="csvFileInput" accept=".csv" style="display: none;" />
+
+      <section class="tabs-panel panel">
+        <div class="panel-header">
+          <div>
+            <p class="section-label">数据视图</p>
+            <h3>选择功能模块</h3>
+          </div>
+        </div>
+        <div class="tabs">
+          <button class="tab-button is-active" data-tab="batches">批次主表</button>
+          <button class="tab-button" data-tab="search">名称查询</button>
+          <button class="tab-button" data-tab="warning">预警管理</button>
+          <button class="tab-button" data-tab="sort">排序显示</button>
+          <button class="tab-button" data-tab="tasks">任务队列</button>
+        </div>
+      </section>
+
+      <section id="batches-tab" class="tab-content panel">
+        <div class="panel-header">
+          <div>
+            <p class="section-label">批次管理</p>
+            <h3>批次主表 batches</h3>
+          </div>
+          <div class="batch-actions">
+            <input type="text" id="batchSearchInput" placeholder="搜索批次号或名称..." class="search-input" />
+          </div>
+        </div>
+        <div id="batchesPanel" class="table-shell"></div>
+      </section>
+
+      <section id="search-tab" class="tab-content panel" style="display: none;">
+        <div class="panel-header">
+          <div>
+            <p class="section-label">名称查询</p>
+            <h3>按粮食名称查询</h3>
+          </div>
+          <div>
+            <select id="grainNameSelect" class="select-input">
+              <option value="">选择粮食名称</option>
+            </select>
+          </div>
+        </div>
+        <div id="searchResults" class="table-shell"></div>
+      </section>
+
+      <section id="warning-tab" class="tab-content panel" style="display: none;">
+        <div class="panel-header">
+          <div>
+            <p class="section-label">预警管理</p>
+            <h3>预警时间堆 warning_heap</h3>
+          </div>
+          <div>
+            <label style="display: flex; gap: 10px; align-items: center;">
+              <span>未来</span>
+              <input type="number" id="warningDaysInput" value="30" class="number-input" style="width: 80px;" />
+              <span>天内预警</span>
+            </label>
+          </div>
+        </div>
+        <div class="warning-summary">
+          <div class="stat-card">
+            <h4>最早预警批次</h4>
+            <div id="earliestWarning" class="empty-state">暂无预警批次</div>
+          </div>
+        </div>
+        <h4 style="margin-top: 20px;">临期批次列表</h4>
+        <div id="nearExpiryPanel" class="heap-grid"></div>
+        <h4 style="margin-top: 20px;">先到期先出库序列</h4>
+        <div style="margin-bottom: 10px;">
+          <select id="outboundGrainSelect" class="select-input">
+            <option value="">选择粮食品种</option>
+          </select>
+        </div>
+        <div id="outboundSequencePanel" class="heap-grid"></div>
+      </section>
+
+      <section id="sort-tab" class="tab-content panel" style="display: none;">
+        <div class="panel-header">
+          <div>
+            <p class="section-label">排序显示</p>
+            <h3>批次排序</h3>
+          </div>
+          <div class="sort-buttons">
+            <button id="sortByAmountBtn" class="ghost-button">按数量排序</button>
+            <button id="sortByDateBtn" class="ghost-button">按预警日期排序</button>
+          </div>
+        </div>
+        <div id="sortedBatchesPanel" class="table-shell"></div>
+      </section>
+
+      <section id="tasks-tab" class="tab-content panel" style="display: none;">
+        <div class="panel-header">
+          <div>
+            <p class="section-label">任务队列</p>
+            <h3>任务队列 task_queue</h3>
+          </div>
+          <div class="task-actions">
+            <button id="addTaskBtn" class="solid-button">添加任务</button>
+            <button id="processTaskBtn" class="ghost-button">处理队头任务</button>
+          </div>
+        </div>
+        <div id="queuePanel" class="queue-shell"></div>
+      </section>
+
+      <section class="data-structures panel">
+        <div class="panel-header">
+          <div>
+            <p class="section-label">数据结构</p>
+            <h3>核心数据结构状态</h3>
+          </div>
+        </div>
+        <div class="structures-grid">
+          <div class="structure-item">
+          <h4>名称索引表 name_index</h4>
+          <div id="nameIndexPanel" class="index-grid"></div>
+        </div>
+        <div class="structure-item">
+          <h4>操作栈 operation_stack</h4>
+          <div id="stackPanel" class="stack-shell"></div>
+        </div>
+        </div>
+      </section>
+    </div>
+
+    <div id="addBatchModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>添加新批次</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>批次号</label>
+            <input type="text" id="newBatchId" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>粮食名称</label>
+            <input type="text" id="newGrainName" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>数量(吨)</label>
+            <input type="number" id="newAmount" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>入库日期</label>
+            <input type="date" id="newInDate" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>预警日期</label>
+            <input type="date" id="newWarningDate" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>仓位</label>
+            <input type="text" id="newPosition" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>状态</label>
+            <select id="newStatus" class="form-input">
+              <option value="待入库">待入库</option>
+              <option value="待出库">待出库</option>
+              <option value="已出库">已出库</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>业务类型</label>
+            <select id="newBusinessType" class="form-input">
+              <option value="采购/轮入">采购/轮入</option>
+              <option value="销售/轮出">销售/轮出</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="cancelAddBatch" class="ghost-button">取消</button>
+          <button id="confirmAddBatch" class="solid-button">确认添加</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="addTaskModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>添加新任务</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>任务类型</label>
+            <select id="newTaskType" class="form-input">
+              <option value="in">入库</option>
+              <option value="out">出库</option>
+              <option value="warn">预警检查</option>
+            </select>
+          </div>
+          <div class="form-group" id="taskBatchIdGroup">
+            <label>批次号</label>
+            <input type="text" id="newTaskBatchId" class="form-input" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="cancelAddTask" class="ghost-button">取消</button>
+          <button id="confirmAddTask" class="solid-button">确认添加</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

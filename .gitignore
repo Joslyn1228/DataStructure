@@ -1,0 +1,9 @@
+# 忽略所有文件
+*
+
+# 只跟踪 grain-frontend-demo 目录
+!grain-frontend-demo/
+!grain-frontend-demo/**
+
+# 跟踪 .gitignore 本身
+!.gitignore
