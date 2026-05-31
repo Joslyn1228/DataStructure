@@ -1,6 +1,11 @@
 # 忽略所有文件
 *
 
+# 跟踪根目录下的前端文件
+!index.html
+!app.js
+!styles.css
+
 # 只跟踪 grain-frontend-demo 目录
 !grain-frontend-demo/
 !grain-frontend-demo/**
